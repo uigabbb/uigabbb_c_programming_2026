@@ -2,74 +2,85 @@
 #include <stdlib.h>
 #include <time.h>
 
-// 가위바위보 출력
-char* rps(int n) {
-    if (n == 1) return "가위";
-    if (n == 2) return "바위";
-    return "보";
-}
-
-// 승패 판단
-int play(int p1, int p2) {
+// 승패 판정
+int getWinner(int p1, int p2) {
     if (p1 == p2) return 0;
-
     if ((p1 == 1 && p2 == 3) ||
         (p1 == 2 && p2 == 1) ||
         (p1 == 3 && p2 == 2)) return 1;
-
-    return -1;
+    return 2;
 }
 
-// 사용자 입력
-int get_input() {
-    int n;
-    while (1) {
-        printf("👉 1(가위) 2(바위) 3(보) 입력: ");
-        scanf("%d", &n);
+// 현재 라운드 이름 출력
+void printRound(int roundSize) {
+    if (roundSize == 8) printf("\n📢 [8강]\n");
+    else if (roundSize == 4) printf("\n📢 [4강]\n");
+    else if (roundSize == 2) printf("\n📢 [결승]\n");
+}
 
-        if (n >= 1 && n <= 3) return n;
-        printf("❌ 다시 입력하세요.\n");
+// 안전한 입력 처리
+int getPlayerInput() {
+    int input, result;
+
+    while (1) {
+        printf("가위(1), 바위(2), 보(3) 중 선택: ");
+        result = scanf("%d", &input);
+
+        if (result != 1) {
+            printf("⚠️ 숫자를 입력하세요!\n");
+            while (getchar() != '\n');
+            continue;
+        }
+
+        if (input >= 1 && input <= 3) return input;
+        else printf("⚠️ 1, 2, 3 중에서 다시 입력하세요!\n");
     }
 }
 
-// 컴퓨터 선택
-int computer_choice() {
+int getComputerInput() {
     return rand() % 3 + 1;
 }
 
-// 경기 진행
-int match(int round, int match_num, int isUserMatch) {
-    int p1, p2;
+// 플레이어 경기
+int playerMatch(int comp, int roundSize) {
+    int p, c, result;
+
+    printf("\n=================================\n");
+    printf("🎮 [%d강] 플레이어 vs 컴퓨터%d\n", roundSize, comp);
+    printf("=================================\n");
 
     while (1) {
-        if (isUserMatch) {
-            printf("\n당신의 차례입니다!\n");
-            p1 = get_input();
-        } else {
-            p1 = computer_choice();
+        p = getPlayerInput();
+        c = getComputerInput();
+
+        printf("👉 플레이어: %d / 컴퓨터%d: %d\n", p, comp, c);
+
+        result = getWinner(p, c);
+
+        if (result == 0) {
+            printf("🤝 비겼습니다! 재경기 진행!\n");
         }
-
-        p2 = computer_choice();
-
-        if (round == 2)
-            printf("\n[ 결승 ]\n");
-        else
-            printf("\n[ %d강 %d경기 ]\n", round, match_num);
-
-        printf("P1: %s vs P2: %s\n", rps(p1), rps(p2));
-
-        int result = play(p1, p2);
-
-        if (result == 1) {
-            printf("👉 P1 승리!\n");
-            return 1;
-        }
-        else if (result == -1) {
-            printf("👉 P2 승리!\n");
+        else if (result == 1) {
+            printf("✅ 플레이어 승리!\n");
             return 0;
         }
+        else {
+            printf("❌ 컴퓨터%d 승리!\n", comp);
+            return 1;
+        }
+    }
+}
 
-        printf("⚠️ 비겼습니다! 재경기 진행...\n");
+// 컴퓨터 경기 (출력 없음)
+int computerMatch() {
+    int c1, c2, result;
+
+    while (1) {
+        c1 = getComputerInput();
+        c2 = getComputerInput();
+        result = getWinner(c1, c2);
+
+        if (result != 0) return result;
     }
 }
 
@@ -77,59 +88,54 @@ int main() {
     srand(time(NULL));
 
     printf("=================================\n");
-    printf("   🎮 8명 토너먼트 가위바위보 🎮\n");
+    printf("🎯 가위바위보 토너먼트 시작!\n");
+    printf("총 8명 참가 (플레이어 포함)\n");
+    printf("👉 3번 이기면 최종 우승!\n");
     printf("=================================\n");
 
-    int players[8] = {1,0,0,0,0,0,0,0}; // 1 = 사용자
+    int players[8] = {0,1,2,3,4,5,6,7};
+    int roundSize = 8;
 
-    int next[4];
+    while (roundSize > 1) {
+        int next[8];
+        int idx = 0;
 
-    // ===== 8강 =====
-    printf("\n========== 🏁 8강 ==========\n");
+        printRound(roundSize);  // 🔥 여기서 "8강" 출력
 
-    for (int i = 0; i < 4; i++) {
-        int isUserMatch = players[2*i] || players[2*i+1];
-        int winner = match(8, i+1, isUserMatch);
+        for (int i = 0; i < roundSize; i += 2) {
+            int p1 = players[i];
+            int p2 = players[i+1];
 
-        if (winner == 1)
-            next[i] = players[2*i];
-        else
-            next[i] = players[2*i+1];
+            if (p1 == 0 || p2 == 0) {
+                int comp = (p1 == 0) ? p2 : p1;
+                int result = playerMatch(comp, roundSize);
+
+                if (result == 0) next[idx++] = 0;
+                else next[idx++] = comp;
+            }
+            else {
+                int result = computerMatch();
+
+                if (result == 1) next[idx++] = p1;
+                else next[idx++] = p2;
+            }
+        }
+
+        for (int i = 0; i < idx; i++) {
+            players[i] = next[i];
+        }
+
+        roundSize = idx;
     }
-
-    int next2[2];
-
-    // ===== 4강 =====
-    printf("\n========== 🏁 4강 ==========\n");
-
-    for (int i = 0; i < 2; i++) {
-        int isUserMatch = next[2*i] || next[2*i+1];
-        int winner = match(4, i+1, isUserMatch);
-
-        if (winner == 1)
-            next2[i] = next[2*i];
-        else
-            next2[i] = next[2*i+1];
-    }
-
-    // ===== 결승 =====
-    printf("\n========== 🏆 결승 ==========\n");
-
-    int isUserMatch = next2[0] || next2[1];
-    int winner = match(2, 1, isUserMatch);
-
-    int finalWinner;
-    if (winner == 1)
-        finalWinner = next2[0];
-    else
-        finalWinner = next2[1];
 
     printf("\n=================================\n");
-    if (finalWinner)
-        printf("🏆 당신이 우승했습니다!!!\n");
-    else
-        printf("🏆 컴퓨터가 우승했습니다.\n");
+    printf("🏆 최종 결과\n");
     printf("=================================\n");
+
+    if (players[0] == 0)
+        printf("🎉 우승! 플레이어가 최종 승리했습니다!\n");
+    else
+        printf("💻 우승! 컴퓨터%d가 최종 승리했습니다!\n", players[0]);
 
     return 0;
 }
